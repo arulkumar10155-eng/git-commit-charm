@@ -216,38 +216,44 @@ export default function AdminOrders() {
 
   const generateChallanPDF = () => {
     if (!selectedOrder) return;
-    // Rectangle/landscape format challan
-    const doc = new jsPDF({ orientation: 'landscape', format: [150, 210] });
+    const doc = new jsPDF({ orientation: 'landscape', format: 'a5' });
     const addr = getAddress();
-    const pw = 210;
-    const ph = 150;
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
 
     // Border
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(40);
+    doc.setLineWidth(0.7);
     doc.rect(5, 5, pw - 10, ph - 10);
 
-    // Company header
-    doc.setFontSize(14);
+    // Header
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('DELIVERY CHALLAN', pw / 2, 15, { align: 'center' });
-    
+    doc.text('DELIVERY CHALLAN', pw / 2, 16, { align: 'center' });
+
+    doc.setDrawColor(100);
+    doc.setLineWidth(0.3);
+    doc.line(8, 20, pw - 8, 20);
+
+    // Order info row
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Order #: ${selectedOrder.order_number}`, 10, 23);
-    doc.text(`Date: ${new Date(selectedOrder.created_at).toLocaleDateString('en-IN')}`, pw - 10, 23, { align: 'right' });
+    doc.text(`Order #: ${selectedOrder.order_number}`, 10, 26);
+    doc.text(`Date: ${new Date(selectedOrder.created_at).toLocaleDateString('en-IN')}`, pw / 2, 26, { align: 'center' });
+    doc.text(`Payment: ${selectedOrder.payment_method?.toUpperCase() || 'N/A'} (${selectedOrder.payment_status?.toUpperCase()})`, pw - 10, 26, { align: 'right' });
 
-    // Divider
-    doc.line(5, 26, pw - 5, 26);
+    doc.line(8, 29, pw - 8, 29);
 
-    // Shipping address box
+    // Two column: Ship To / Payment Info
+    const colMid = pw / 2;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('DELIVER TO:', 10, 32);
+    doc.setFontSize(9);
+    doc.text('DELIVER TO:', 10, 35);
+
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     if (addr) {
-      let ay = 37;
+      let ay = 40;
       doc.text(addr.full_name, 10, ay); ay += 4;
       doc.text(addr.address_line1, 10, ay); ay += 4;
       if (addr.address_line2) { doc.text(addr.address_line2, 10, ay); ay += 4; }
@@ -256,61 +262,78 @@ export default function AdminOrders() {
       if (addr.landmark) { ay += 4; doc.text(`Landmark: ${addr.landmark}`, 10, ay); }
     }
 
-    // Contact info on right
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('PAYMENT:', pw / 2 + 10, 32);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.text(`Method: ${selectedOrder.payment_method?.toUpperCase() || 'N/A'}`, pw / 2 + 10, 37);
-    doc.text(`Status: ${selectedOrder.payment_status?.toUpperCase()}`, pw / 2 + 10, 41);
+    // Vertical divider
+    doc.setDrawColor(180);
+    doc.line(colMid, 30, colMid, 62);
 
-    // Items table
-    let y = 60;
-    doc.line(5, y - 2, pw - 5, y - 2);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    doc.text('S.No', 10, y);
-    doc.text('Product', 25, y);
-    doc.text('Variant', 110, y);
-    doc.text('Qty', 150, y);
-    doc.text('Price', 170, y);
-    doc.text('Total', 190, y);
-    y += 2;
-    doc.line(5, y, pw - 5, y);
-    y += 5;
-
-    doc.setFont('helvetica', 'normal');
-    orderItems.forEach((item, idx) => {
-      doc.text(String(idx + 1), 10, y);
-      doc.text(item.product_name.substring(0, 45), 25, y);
-      doc.text(item.variant_name || '-', 110, y);
-      doc.text(String(item.quantity), 150, y);
-      doc.text(`₹${Number(item.price).toFixed(0)}`, 170, y);
-      doc.text(`₹${Number(item.total).toFixed(0)}`, 190, y);
-      y += 5;
-    });
-
-    // Total line
-    doc.line(5, y, pw - 5, y);
-    y += 4;
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Total: ₹${Number(selectedOrder.total).toFixed(0)}`, 190, y, { align: 'right' });
-
+    // COD info on right
     if (delivery?.is_cod) {
-      y += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('COD COLLECTION:', colMid + 5, 35);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Rs ${Number(delivery.cod_amount).toFixed(0)}`, colMid + 5, 42);
       doc.setFontSize(8);
-      doc.text(`COD Amount to Collect: ₹${Number(delivery.cod_amount).toFixed(0)}`, 10, y);
+      doc.text(`Status: ${delivery.cod_collected ? 'Collected' : 'Pending'}`, colMid + 5, 48);
     }
 
-    // Footer
-    y = ph - 20;
+    // Items table
+    let y = 66;
+    doc.setDrawColor(40);
+    doc.setLineWidth(0.5);
+    doc.line(8, y - 2, pw - 8, y - 2);
+
+    // Table header
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    const cols = [10, 20, 95, 120, 148, 175];
+    doc.text('S.No', cols[0], y);
+    doc.text('Product Name', cols[1], y);
+    doc.text('Variant', cols[2], y);
+    doc.text('Qty', cols[3], y);
+    doc.text('Rate (Rs)', cols[4], y);
+    doc.text('Amount (Rs)', cols[5], y);
+    y += 2;
+    doc.line(8, y, pw - 8, y);
+    y += 5;
+
+    // Table rows
+    doc.setFont('helvetica', 'normal');
+    orderItems.forEach((item, idx) => {
+      doc.text(String(idx + 1), cols[0], y);
+      doc.text(item.product_name.substring(0, 38), cols[1], y);
+      doc.text(item.variant_name || '-', cols[2], y);
+      doc.text(String(item.quantity), cols[3], y);
+      doc.text(`Rs ${Number(item.price).toFixed(0)}`, cols[4], y);
+      doc.text(`Rs ${Number(item.total).toFixed(0)}`, cols[5], y);
+      y += 6;
+    });
+
+    // Totals
+    doc.line(8, y, pw - 8, y);
+    y += 5;
+    doc.setFontSize(8);
+    doc.text('Subtotal:', cols[4], y); doc.text(`Rs ${Number(selectedOrder.subtotal).toFixed(0)}`, cols[5], y); y += 5;
+    if (Number(selectedOrder.discount) > 0) {
+      doc.text('Discount:', cols[4], y); doc.text(`-Rs ${Number(selectedOrder.discount).toFixed(0)}`, cols[5], y); y += 5;
+    }
+    doc.text('Shipping:', cols[4], y); doc.text(`Rs ${Number(selectedOrder.shipping_charge).toFixed(0)}`, cols[5], y); y += 5;
+    doc.line(cols[4], y - 2, pw - 8, y - 2);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Grand Total:', cols[4], y + 2); doc.text(`Rs ${Number(selectedOrder.total).toFixed(0)}`, cols[5], y + 2);
+
+    // Footer signatures
+    y = ph - 22;
+    doc.setDrawColor(100);
+    doc.setLineWidth(0.3);
+    doc.line(8, y - 4, pw - 8, y - 4);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.text('Received By: ___________________', 10, y);
-    doc.text('Date: ___________________', pw / 2, y);
-    doc.text('Signature: ___________________', pw - 60, y);
+    doc.text('Date: ___________________', pw / 2 - 20, y);
+    doc.text('Signature: ___________________', pw - 65, y);
 
     doc.save(`Challan-${selectedOrder.order_number}.pdf`);
   };

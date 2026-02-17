@@ -12,22 +12,31 @@ interface AdminLayoutProps {
 export function AdminLayout({ children, title, description, actions }: AdminLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Listen for sidebar collapse (could be improved with context)
+  // Sync with localStorage-persisted sidebar state
   useEffect(() => {
     const checkSidebar = () => {
-      const sidebar = document.querySelector('aside');
-      if (sidebar) {
-        setSidebarCollapsed(sidebar.classList.contains('w-16'));
-      }
+      const collapsed = localStorage.getItem('admin_sidebar_collapsed') === 'true';
+      setSidebarCollapsed(collapsed);
     };
-    
+    checkSidebar();
+
+    // Watch for DOM changes on sidebar
     const observer = new MutationObserver(checkSidebar);
     const sidebar = document.querySelector('aside');
     if (sidebar) {
       observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
     }
-    
-    return () => observer.disconnect();
+
+    // Also listen for storage events  
+    window.addEventListener('storage', checkSidebar);
+    // Poll briefly to catch same-tab changes
+    const interval = setInterval(checkSidebar, 200);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('storage', checkSidebar);
+      clearInterval(interval);
+    };
   }, []);
 
   return (
