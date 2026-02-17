@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Truck,
+  PackageOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,6 +29,7 @@ const menuItems = [
   { path: '/admin/storefront', icon: Palette, label: 'Storefront Builder' },
   { path: '/admin/banners', icon: Image, label: 'Banners & Media' },
   { path: '/admin/products', icon: Package, label: 'Products' },
+  { path: '/admin/bundles', icon: PackageOpen, label: 'Bundles' },
   { path: '/admin/offers', icon: Percent, label: 'Offers & Coupons' },
   { path: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
   { path: '/admin/deliveries', icon: Truck, label: 'Deliveries' },

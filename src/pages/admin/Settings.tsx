@@ -14,6 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Store, Palette, Truck, Link as LinkIcon, Bell, CreditCard, Megaphone, Loader2, CheckCircle2, XCircle, ExternalLink, Shield, Unplug } from 'lucide-react';
 import type { StoreInfo, ThemeSettings, CheckoutSettings, SocialLinks } from '@/types/database';
+import { useStorefrontTheme, THEME_OPTIONS, type StorefrontTheme } from '@/hooks/useTheme';
+import { cn } from '@/lib/utils';
 
 interface RazorpayConnectionStatus {
   connected: boolean;
@@ -81,6 +83,8 @@ export default function AdminSettings() {
     link: '',
   });
   const { toast } = useToast();
+
+  const { theme: storefrontTheme, setTheme: setStorefrontTheme } = useStorefrontTheme();
 
   useEffect(() => {
     fetchSettings();
@@ -447,83 +451,61 @@ export default function AdminSettings() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5" />
-                Theme Settings
+                Storefront Theme
               </CardTitle>
-              <CardDescription>Customize the look and feel of your store</CardDescription>
+              <CardDescription>Choose a complete visual theme for your store</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primary_color">Primary Color</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="primary_color"
-                      type="color"
-                      value={theme.primary_color}
-                      onChange={(e) => setTheme({ ...theme, primary_color: e.target.value })}
-                      className="w-16 h-10 p-1"
-                    />
-                    <Input
-                      value={theme.primary_color}
-                      onChange={(e) => setTheme({ ...theme, primary_color: e.target.value })}
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="secondary_color">Secondary Color</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="secondary_color"
-                      type="color"
-                      value={theme.secondary_color}
-                      onChange={(e) => setTheme({ ...theme, secondary_color: e.target.value })}
-                      className="w-16 h-10 p-1"
-                    />
-                    <Input
-                      value={theme.secondary_color}
-                      onChange={(e) => setTheme({ ...theme, secondary_color: e.target.value })}
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {THEME_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setStorefrontTheme(opt.value)}
+                    className={cn(
+                      "p-4 rounded-lg border-2 text-left transition-all hover:shadow-md",
+                      storefrontTheme === opt.value
+                        ? "border-primary bg-accent"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold text-sm">{opt.label}</span>
+                      {storefrontTheme === opt.value && (
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{opt.description}</p>
+                    {/* Mini color preview */}
+                    <div className="flex gap-1 mt-3">
+                      {opt.value === 'default' && <><div className="w-6 h-6 rounded-full bg-blue-500" /><div className="w-6 h-6 rounded-full bg-white border" /><div className="w-6 h-6 rounded-full bg-slate-100" /></>}
+                      {opt.value === 'minimal' && <><div className="w-6 h-6 rounded-full bg-gray-900" /><div className="w-6 h-6 rounded-full bg-white border" /><div className="w-6 h-6 rounded-full bg-gray-100" /></>}
+                      {opt.value === 'elegant' && <><div className="w-6 h-6 rounded-full bg-yellow-600" /><div className="w-6 h-6 rounded-full bg-stone-900" /><div className="w-6 h-6 rounded-full bg-stone-800" /></>}
+                      {opt.value === 'playful' && <><div className="w-6 h-6 rounded-full bg-purple-500" /><div className="w-6 h-6 rounded-full bg-pink-200" /><div className="w-6 h-6 rounded-full bg-cyan-200" /></>}
+                      {opt.value === 'bold' && <><div className="w-6 h-6 rounded-full bg-rose-500" /><div className="w-6 h-6 rounded-full bg-slate-800" /><div className="w-6 h-6 rounded-full bg-slate-700" /></>}
+                    </div>
+                  </button>
+                ))}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="font_family">Font Family</Label>
-                  <Input
-                    id="font_family"
-                    value={theme.font_family}
-                    onChange={(e) => setTheme({ ...theme, font_family: e.target.value })}
-                    placeholder="Inter, system-ui"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="border_radius">Border Radius</Label>
-                  <Input
-                    id="border_radius"
-                    value={theme.border_radius}
-                    onChange={(e) => setTheme({ ...theme, border_radius: e.target.value })}
-                    placeholder="8px"
-                  />
-                </div>
-              </div>
+              <Separator />
 
-              <div className="p-4 border rounded-lg">
-                <p className="text-sm font-medium mb-3">Preview</p>
-                <div className="flex gap-3">
-                  <div
-                    className="w-24 h-12 rounded flex items-center justify-center text-white text-sm font-medium"
-                    style={{ backgroundColor: theme.primary_color, borderRadius: theme.border_radius }}
-                  >
-                    Primary
+              {/* Legacy color customization */}
+              <div>
+                <p className="text-sm font-medium mb-3">Custom Color Overrides</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="primary_color">Primary Color</Label>
+                    <div className="flex gap-2">
+                      <Input id="primary_color" type="color" value={theme.primary_color} onChange={(e) => setTheme({ ...theme, primary_color: e.target.value })} className="w-16 h-10 p-1" />
+                      <Input value={theme.primary_color} onChange={(e) => setTheme({ ...theme, primary_color: e.target.value })} className="flex-1" />
+                    </div>
                   </div>
-                  <div
-                    className="w-24 h-12 rounded flex items-center justify-center text-white text-sm font-medium"
-                    style={{ backgroundColor: theme.secondary_color, borderRadius: theme.border_radius }}
-                  >
-                    Secondary
+                  <div className="space-y-2">
+                    <Label htmlFor="secondary_color">Secondary Color</Label>
+                    <div className="flex gap-2">
+                      <Input id="secondary_color" type="color" value={theme.secondary_color} onChange={(e) => setTheme({ ...theme, secondary_color: e.target.value })} className="w-16 h-10 p-1" />
+                      <Input value={theme.secondary_color} onChange={(e) => setTheme({ ...theme, secondary_color: e.target.value })} className="flex-1" />
+                    </div>
                   </div>
                 </div>
               </div>
