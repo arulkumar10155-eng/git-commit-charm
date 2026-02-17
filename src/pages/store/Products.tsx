@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ShimmerProductGrid } from '@/components/ui/shimmer';
+import { SEOHead } from '@/components/seo/SEOHead';
 import type { Product, Category } from '@/types/database';
 
 export default function ProductsPage() {
@@ -213,6 +214,11 @@ export default function ProductsPage() {
 
   return (
     <StorefrontLayout>
+      <SEOHead
+        title="Shop All Products - Decon Fashions"
+        description="Browse our complete collection of premium men's clothing. Free shipping on orders above ₹500."
+        jsonLd={{ '@type': 'CollectionPage', name: 'Products' }}
+      />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">

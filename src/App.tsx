@@ -21,7 +21,6 @@ import AdminExpenses from "./pages/admin/Expenses";
 import AdminCustomers from "./pages/admin/Customers";
 import AdminReports from "./pages/admin/Reports";
 import AdminSettings from "./pages/admin/Settings";
-import AdminStorefront from "./pages/admin/Storefront";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminBundles from "./pages/admin/Bundles";
 
@@ -93,7 +92,6 @@ const AppRoutes = () => (
       {/* Admin */}
       <Route path="/admin/login" element={<AdminAuth />} />
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-      <Route path="/admin/storefront" element={<AdminRoute><AdminStorefront /></AdminRoute>} />
       <Route path="/admin/banners" element={<AdminRoute><AdminBanners /></AdminRoute>} />
       <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
       <Route path="/admin/categories" element={<AdminRoute><AdminCategories /></AdminRoute>} />

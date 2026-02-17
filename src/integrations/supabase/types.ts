@@ -921,6 +921,7 @@ export type Database = {
           badge: string | null
           barcode: string | null
           category_id: string | null
+          content_sections: Json | null
           cost_price: number | null
           created_at: string | null
           description: string | null
@@ -945,6 +946,7 @@ export type Database = {
           badge?: string | null
           barcode?: string | null
           category_id?: string | null
+          content_sections?: Json | null
           cost_price?: number | null
           created_at?: string | null
           description?: string | null
@@ -969,6 +971,7 @@ export type Database = {
           badge?: string | null
           barcode?: string | null
           category_id?: string | null
+          content_sections?: Json | null
           cost_price?: number | null
           created_at?: string | null
           description?: string | null

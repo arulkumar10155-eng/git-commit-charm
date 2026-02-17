@@ -457,7 +457,7 @@ export default function AdminSettings() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {THEME_OPTIONS.map((opt) => (
+               {THEME_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => setStorefrontTheme(opt.value)}
@@ -475,13 +475,10 @@ export default function AdminSettings() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">{opt.description}</p>
-                    {/* Mini color preview */}
                     <div className="flex gap-1 mt-3">
-                      {opt.value === 'default' && <><div className="w-6 h-6 rounded-full bg-blue-500" /><div className="w-6 h-6 rounded-full bg-white border" /><div className="w-6 h-6 rounded-full bg-slate-100" /></>}
-                      {opt.value === 'minimal' && <><div className="w-6 h-6 rounded-full bg-gray-900" /><div className="w-6 h-6 rounded-full bg-white border" /><div className="w-6 h-6 rounded-full bg-gray-100" /></>}
-                      {opt.value === 'elegant' && <><div className="w-6 h-6 rounded-full bg-yellow-600" /><div className="w-6 h-6 rounded-full bg-stone-900" /><div className="w-6 h-6 rounded-full bg-stone-800" /></>}
-                      {opt.value === 'playful' && <><div className="w-6 h-6 rounded-full bg-purple-500" /><div className="w-6 h-6 rounded-full bg-pink-200" /><div className="w-6 h-6 rounded-full bg-cyan-200" /></>}
-                      {opt.value === 'bold' && <><div className="w-6 h-6 rounded-full bg-rose-500" /><div className="w-6 h-6 rounded-full bg-slate-800" /><div className="w-6 h-6 rounded-full bg-slate-700" /></>}
+                      {opt.colors.map((c, i) => (
+                        <div key={i} className="w-6 h-6 rounded-full border border-border" style={{ backgroundColor: c }} />
+                      ))}
                     </div>
                   </button>
                 ))}

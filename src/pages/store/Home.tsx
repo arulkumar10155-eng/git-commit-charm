@@ -6,11 +6,13 @@ import { StorefrontLayout } from '@/components/storefront/StorefrontLayout';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffers } from '@/hooks/useOffers';
+import { SEOHead } from '@/components/seo/SEOHead';
 import type { Product, Banner, Category } from '@/types/database';
 
 function FullPageShimmer() {
@@ -46,13 +48,14 @@ function FullPageShimmer() {
 }
 
 const fetchHomeData = async () => {
-  const [bannersRes, middleBannersRes, categoriesRes, featuredRes, bestsellersRes, newRes] = await Promise.all([
+  const [bannersRes, middleBannersRes, categoriesRes, featuredRes, bestsellersRes, newRes, bundlesRes] = await Promise.all([
     supabase.from('banners').select('*').eq('is_active', true).eq('position', 'home_top').order('sort_order'),
     supabase.from('banners').select('*').eq('is_active', true).eq('position', 'home_middle').order('sort_order'),
     supabase.from('categories').select('*').eq('is_active', true).is('parent_id', null).order('sort_order').limit(8),
     supabase.from('products').select('*, category:categories(*), images:product_images(*)').eq('is_active', true).eq('is_featured', true).limit(8),
     supabase.from('products').select('*, category:categories(*), images:product_images(*)').eq('is_active', true).eq('is_bestseller', true).limit(8),
     supabase.from('products').select('*, category:categories(*), images:product_images(*)').eq('is_active', true).order('created_at', { ascending: false }).limit(8),
+    supabase.from('bundles').select('*, items:bundle_items(*, product:products(name, price, images:product_images(*)))').eq('is_active', true).order('sort_order').limit(6),
   ]);
   return {
     banners: (bannersRes.data || []) as Banner[],
@@ -61,6 +64,7 @@ const fetchHomeData = async () => {
     featuredProducts: (featuredRes.data || []) as Product[],
     bestsellerProducts: (bestsellersRes.data || []) as Product[],
     newArrivals: (newRes.data || []) as Product[],
+    bundles: bundlesRes.data || [],
   };
 };
 
@@ -83,7 +87,7 @@ export default function HomePage() {
   const featuredProducts = data?.featuredProducts || [];
   const bestsellerProducts = data?.bestsellerProducts || [];
   const newArrivals = data?.newArrivals || [];
-
+  const bundles = data?.bundles || [];
   useEffect(() => {
     if (banners.length > 1) {
       const interval = setInterval(() => {
@@ -139,6 +143,17 @@ export default function HomePage() {
 
   return (
     <StorefrontLayout>
+      <SEOHead
+        title="Decon Fashions - Premium Men's Clothing Store"
+        description="Shop premium men's shirts, pants & fashion at Decon Fashions. Free shipping on orders above ₹500. Quality clothing at affordable prices."
+        jsonLd={{
+          '@type': 'Store',
+          name: 'Decon Fashions',
+          description: 'Premium men\'s clothing store',
+          url: window.location.origin,
+          priceRange: '₹₹',
+        }}
+      />
       {/* Hero Banner Slider */}
       {banners.length > 0 && (
         <section className="relative">
@@ -301,6 +316,45 @@ export default function HomePage() {
             {featuredProducts.map((product) => (
               <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} onAddToWishlist={handleAddToWishlist} productOffer={getProductOffer(product)} />
             ))}
+          </div>
+        </section>
+      )}
+      {/* Bundles */}
+      {bundles.length > 0 && (
+        <section className="container mx-auto px-4 py-6 md:py-10">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h2 className="text-lg md:text-2xl font-bold text-foreground">Bundle Deals</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {bundles.map((bundle: any) => {
+              const discount = bundle.compare_price && bundle.compare_price > bundle.bundle_price
+                ? Math.round(((bundle.compare_price - bundle.bundle_price) / bundle.compare_price) * 100)
+                : 0;
+              const bundleImage = bundle.image_url || bundle.items?.[0]?.product?.images?.[0]?.image_url || '/placeholder.svg';
+              return (
+                <Card key={bundle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <CardContent className="p-0">
+                    <div className="aspect-[2/1] relative overflow-hidden bg-muted">
+                      <img src={bundleImage} alt={bundle.name} className="w-full h-full object-cover" loading="lazy" />
+                      {discount > 0 && (
+                        <Badge variant="destructive" className="absolute top-2 left-2">{discount}% OFF</Badge>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-foreground">{bundle.name}</h3>
+                      {bundle.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{bundle.description}</p>}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-lg font-bold text-foreground">₹{Number(bundle.bundle_price).toFixed(0)}</span>
+                        {bundle.compare_price && bundle.compare_price > bundle.bundle_price && (
+                          <span className="text-sm text-muted-foreground line-through">₹{Number(bundle.compare_price).toFixed(0)}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{bundle.items?.length || 0} products included</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </section>
       )}
