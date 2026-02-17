@@ -29,6 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MultiImageUpload } from '@/components/ui/image-upload';
+import { ContentSectionsEditor } from '@/components/product/ContentSectionsEditor';
+import type { ContentSection } from '@/components/product/ContentSections';
 
 const PRODUCT_TYPES = [
   { value: 'general', label: 'General' },
@@ -58,7 +60,7 @@ export default function AdminProducts() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<Partial<Product> & { imageUrls?: string[]; productType?: string }>({});
+  const [formData, setFormData] = useState<Partial<Product> & { imageUrls?: string[]; productType?: string; contentSections?: ContentSection[] }>({});
   const [variantForms, setVariantForms] = useState<VariantForm[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const { toast } = useToast();
@@ -118,7 +120,8 @@ export default function AdminProducts() {
       if (names.some(n => CLOTHING_SIZES.includes(n))) detectedType = 'clothing';
       else if (names.some(n => FOOTWEAR_SIZES.includes(n))) detectedType = 'footwear';
     }
-    setFormData({ ...selectedProduct, imageUrls, productType: detectedType });
+    const contentSections = (selectedProduct as any).content_sections as ContentSection[] || [];
+    setFormData({ ...selectedProduct, imageUrls, productType: detectedType, contentSections });
     setVariantForms(existingVariants);
     setIsDetailOpen(false);
     setIsFormOpen(true);
@@ -135,6 +138,7 @@ export default function AdminProducts() {
       sort_order: 0,
       imageUrls: [],
       productType: 'general',
+      contentSections: [],
     });
     setVariantForms([]);
     setSelectedProduct(null);
@@ -212,6 +216,7 @@ export default function AdminProducts() {
       is_bestseller: formData.is_bestseller ?? false,
       badge: formData.badge || null,
       sort_order: formData.sort_order ?? 0,
+      content_sections: (formData.contentSections || []) as unknown as import('@/integrations/supabase/types').Json,
     };
 
     try {
@@ -449,12 +454,13 @@ export default function AdminProducts() {
           </DialogHeader>
           
           <Tabs defaultValue="basic" className="mt-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="basic">Basic</TabsTrigger>
               <TabsTrigger value="pricing">Pricing</TabsTrigger>
               <TabsTrigger value="inventory">Inventory</TabsTrigger>
               <TabsTrigger value="variants">Variants</TabsTrigger>
               <TabsTrigger value="images">Images</TabsTrigger>
+              <TabsTrigger value="content">Content</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4 mt-4">
@@ -741,6 +747,13 @@ export default function AdminProducts() {
                   maxImages={10}
                 />
               </div>
+            </TabsContent>
+
+            <TabsContent value="content" className="space-y-4 mt-4">
+              <ContentSectionsEditor
+                sections={formData.contentSections || []}
+                onChange={(sections) => setFormData({ ...formData, contentSections: sections })}
+              />
             </TabsContent>
           </Tabs>
 
