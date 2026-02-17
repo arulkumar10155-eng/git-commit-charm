@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Minus, Plus, Heart, ShoppingCart, Truck, Shield, RefreshCw, ChevronLeft, ChevronRight, Star, Share2, Loader2 } from 'lucide-react';
 import { StorefrontLayout } from '@/components/storefront/StorefrontLayout';
@@ -16,6 +16,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Shimmer } from '@/components/ui/shimmer';
+import { SEOHead } from '@/components/seo/SEOHead';
+import { ContentSections, type ContentSection } from '@/components/product/ContentSections';
 import type { Product, ProductVariant, Review } from '@/types/database';
 
 export default function ProductDetailPage() {
@@ -221,8 +223,37 @@ export default function ProductDetailPage() {
     percent: reviews.length > 0 ? (reviews.filter(r => r.rating === star).length / reviews.length) * 100 : 0,
   }));
 
+  const contentSections: ContentSection[] = (product as any).content_sections || [];
+
+  const productJsonLd = {
+    '@type': 'Product',
+    name: product.name,
+    description: product.description || product.short_description || '',
+    image: images.map(i => i.image_url),
+    sku: product.sku || undefined,
+    offers: {
+      '@type': 'Offer',
+      price: currentPrice,
+      priceCurrency: 'INR',
+      availability: currentStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    },
+    ...(reviews.length > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: avgRating.toFixed(1),
+        reviewCount: reviews.length,
+      },
+    }),
+  };
+
   return (
     <StorefrontLayout>
+      <SEOHead
+        title={`${product.name} - Buy Online | Decon Fashions`}
+        description={product.short_description || product.description?.slice(0, 160) || `Buy ${product.name} online at best price.`}
+        image={images[0]?.image_url}
+        jsonLd={productJsonLd}
+      />
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-full overflow-hidden">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-4 md:mb-6 overflow-x-auto whitespace-nowrap">
@@ -386,8 +417,11 @@ export default function ProductDetailPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="description" className="mb-8 md:mb-12">
-          <TabsList className="w-full md:w-auto">
+          <TabsList className="w-full md:w-auto flex-wrap">
             <TabsTrigger value="description" className="flex-1 md:flex-none">Description</TabsTrigger>
+            {contentSections.filter(s => s.enabled).length > 0 && (
+              <TabsTrigger value="details" className="flex-1 md:flex-none">Details</TabsTrigger>
+            )}
             <TabsTrigger value="reviews" className="flex-1 md:flex-none">Reviews ({reviews.length})</TabsTrigger>
           </TabsList>
           <TabsContent value="description" className="mt-4">
@@ -395,6 +429,11 @@ export default function ProductDetailPage() {
               <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{product.description || 'No description available.'}</p>
             </div>
           </TabsContent>
+          {contentSections.filter(s => s.enabled).length > 0 && (
+            <TabsContent value="details" className="mt-4">
+              <ContentSections sections={contentSections} />
+            </TabsContent>
+          )}
           <TabsContent value="reviews" className="mt-4">
             <div className="grid md:grid-cols-3 gap-6 md:gap-8">
               {/* Rating Summary + Write Review */}

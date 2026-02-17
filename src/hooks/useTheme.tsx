@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type StorefrontTheme = 'default' | 'minimal' | 'elegant' | 'playful' | 'bold';
+export type StorefrontTheme = 'default' | 'minimal' | 'elegant' | 'playful' | 'bold' | 'nature' | 'tech' | 'sunset' | 'ocean';
 
 interface ThemeContextType {
   theme: StorefrontTheme;
@@ -15,12 +15,16 @@ const ThemeContext = createContext<ThemeContextType>({
   isLoading: true,
 });
 
-export const THEME_OPTIONS: { value: StorefrontTheme; label: string; description: string }[] = [
-  { value: 'default', label: 'Zoho Classic', description: 'Clean blue & white professional design' },
-  { value: 'minimal', label: 'Minimal Clean', description: 'White space, subtle borders, simple typography' },
-  { value: 'elegant', label: 'Elegant Luxury', description: 'Dark tones, serif fonts, gold accents' },
-  { value: 'playful', label: 'Playful Modern', description: 'Rounded shapes, gradients, vibrant colors' },
-  { value: 'bold', label: 'Bold Vibrant', description: 'Strong colors, large imagery, dynamic layout' },
+export const THEME_OPTIONS: { value: StorefrontTheme; label: string; description: string; colors: string[] }[] = [
+  { value: 'default', label: 'Zoho Classic', description: 'Clean blue & white professional design', colors: ['#3B82F6', '#FFFFFF', '#F1F5F9'] },
+  { value: 'minimal', label: 'Minimal Clean', description: 'White space, subtle borders, simple typography', colors: ['#18181B', '#FFFFFF', '#F5F5F5'] },
+  { value: 'elegant', label: 'Elegant Luxury', description: 'Dark tones with gold accents', colors: ['#C9963B', '#1A1611', '#2A241C'] },
+  { value: 'playful', label: 'Playful Modern', description: 'Rounded shapes, gradients, vibrant colors', colors: ['#8B5CF6', '#FBBFCB', '#B2F5EA'] },
+  { value: 'bold', label: 'Bold Vibrant', description: 'Strong colors, dynamic dark layout', colors: ['#E11D48', '#1E293B', '#334155'] },
+  { value: 'nature', label: 'Nature Organic', description: 'Earthy greens and warm neutrals', colors: ['#16A34A', '#F7F5F0', '#E8E4DB'] },
+  { value: 'tech', label: 'Tech Sleek', description: 'Dark cyber theme with electric blue', colors: ['#0EA5E9', '#0F172A', '#1E293B'] },
+  { value: 'sunset', label: 'Warm Sunset', description: 'Warm oranges and terracotta tones', colors: ['#EA580C', '#FDF5F0', '#FDE8D8'] },
+  { value: 'ocean', label: 'Ocean Breeze', description: 'Cool teal and aqua ocean vibes', colors: ['#0891B2', '#F0FDFA', '#E0F7FA'] },
 ];
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -32,7 +36,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-storefront-theme', theme);
+    if (theme !== 'default') {
+      document.documentElement.setAttribute('data-storefront-theme', theme);
+    } else {
+      document.documentElement.removeAttribute('data-storefront-theme');
+    }
   }, [theme]);
 
   const fetchTheme = async () => {
@@ -50,9 +58,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = async (newTheme: StorefrontTheme) => {
     setThemeState(newTheme);
-    document.documentElement.setAttribute('data-storefront-theme', newTheme);
-    
-    // Upsert to store_settings
+
     const { data: existing } = await supabase
       .from('store_settings')
       .select('id')
