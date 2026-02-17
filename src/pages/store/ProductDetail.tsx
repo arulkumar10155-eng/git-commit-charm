@@ -5,7 +5,7 @@ import { StorefrontLayout } from '@/components/storefront/StorefrontLayout';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -415,26 +415,26 @@ export default function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="description" className="mb-8 md:mb-12">
-          <TabsList className="w-full md:w-auto flex-wrap">
-            <TabsTrigger value="description" className="flex-1 md:flex-none">Description</TabsTrigger>
-            {contentSections.filter(s => s.enabled).length > 0 && (
-              <TabsTrigger value="details" className="flex-1 md:flex-none">Details</TabsTrigger>
-            )}
-            <TabsTrigger value="reviews" className="flex-1 md:flex-none">Reviews ({reviews.length})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="description" className="mt-4">
-            <div className="prose max-w-none">
-              <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base">{product.description || 'No description available.'}</p>
-            </div>
-          </TabsContent>
-          {contentSections.filter(s => s.enabled).length > 0 && (
-            <TabsContent value="details" className="mt-4">
-              <ContentSections sections={contentSections} />
-            </TabsContent>
-          )}
-          <TabsContent value="reviews" className="mt-4">
+        {/* Description Section */}
+        <section className="mb-8 md:mb-10">
+          <h2 className="text-lg md:text-xl font-bold text-foreground mb-4">Description</h2>
+          <div className="prose max-w-none">
+            <p className="text-muted-foreground whitespace-pre-wrap text-sm md:text-base leading-relaxed">
+              {product.description || 'No description available.'}
+            </p>
+          </div>
+        </section>
+
+        {/* Content Sections - Sequential Amazon-style */}
+        {contentSections.filter(s => s.enabled).length > 0 && (
+          <section className="mb-8 md:mb-10">
+            <ContentSections sections={contentSections} />
+          </section>
+        )}
+
+        {/* Reviews Section */}
+        <section className="mb-8 md:mb-12">
+          <h2 className="text-lg md:text-xl font-bold text-foreground mb-6">Customer Reviews ({reviews.length})</h2>
             <div className="grid md:grid-cols-3 gap-6 md:gap-8">
               {/* Rating Summary + Write Review */}
               <div className="space-y-4">
@@ -522,8 +522,7 @@ export default function ProductDetailPage() {
                 )}
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
+        </section>
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

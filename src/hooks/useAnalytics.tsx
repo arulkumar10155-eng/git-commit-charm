@@ -22,6 +22,28 @@ export function useAnalytics() {
     }
   }, [location.pathname]);
 
+  // Track scroll depth
+  useEffect(() => {
+    let maxScroll = 0;
+    let tracked25 = false, tracked50 = false, tracked75 = false, tracked100 = false;
+
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight <= 0) return;
+      const percent = Math.round((scrollTop / docHeight) * 100);
+      if (percent > maxScroll) maxScroll = percent;
+
+      if (percent >= 25 && !tracked25) { tracked25 = true; trackEvent('scroll_depth', { metadata: { depth: 25 } }); }
+      if (percent >= 50 && !tracked50) { tracked50 = true; trackEvent('scroll_depth', { metadata: { depth: 50 } }); }
+      if (percent >= 75 && !tracked75) { tracked75 = true; trackEvent('scroll_depth', { metadata: { depth: 75 } }); }
+      if (percent >= 100 && !tracked100) { tracked100 = true; trackEvent('scroll_depth', { metadata: { depth: 100 } }); }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [location.pathname]);
+
   const trackEvent = useCallback(async (
     eventType: string,
     data?: { product_id?: string; category_id?: string; page_path?: string; metadata?: Record<string, unknown> }
