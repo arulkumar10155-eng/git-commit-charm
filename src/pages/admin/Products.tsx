@@ -4,6 +4,7 @@ import { DataTable, Column } from '@/components/admin/DataTable';
 import { DetailPanel, DetailField, DetailSection } from '@/components/admin/DetailPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +60,7 @@ export default function AdminProducts() {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<Product> & { imageUrls?: string[]; productType?: string }>({});
   const [variantForms, setVariantForms] = useState<VariantForm[]>([]);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -321,6 +323,10 @@ export default function AdminProducts() {
     },
   ];
 
+  const filteredProducts = selectedCategoryFilter === 'all'
+    ? products
+    : products.filter(p => p.category_id === selectedCategoryFilter);
+
   return (
     <AdminLayout
       title="Products"
@@ -332,12 +338,46 @@ export default function AdminProducts() {
         </Button>
       }
     >
+      {/* Category filter chips */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setSelectedCategoryFilter('all')}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+              selectedCategoryFilter === 'all'
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card text-muted-foreground border-border hover:border-primary hover:text-foreground"
+            )}
+          >
+            All ({products.length})
+          </button>
+          {categories.map((cat) => {
+            const count = products.filter(p => p.category_id === cat.id).length;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategoryFilter(cat.id)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
+                  selectedCategoryFilter === cat.id
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border hover:border-primary hover:text-foreground"
+                )}
+              >
+                {cat.name} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {isLoading ? (
         <ShimmerTable rows={6} columns={6} />
       ) : (
         <DataTable<Product>
           columns={columns}
-          data={products}
+          data={filteredProducts}
           isLoading={false}
           onRowClick={handleRowClick}
           searchable
