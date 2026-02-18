@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +17,9 @@ const SECTION_TYPES = [
   { value: 'faq', label: 'FAQ' },
   { value: 'size_guide', label: 'Size Guide' },
   { value: 'ingredients', label: 'Ingredients / Materials' },
+  { value: 'before_after', label: 'Before & After' },
+  { value: 'spotlight', label: 'Spotlight Cards' },
+  { value: 'video', label: 'Video Embed' },
 ];
 
 export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEditorProps) {
@@ -27,6 +29,7 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
       title: 'Details',
       content: '',
       items: [],
+      spotlights: [],
       enabled: true,
       order: sections.length,
     }]);
@@ -42,6 +45,7 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
     onChange(sections.filter((_, i) => i !== idx));
   };
 
+  // FAQ helpers
   const addFaqItem = (idx: number) => {
     const s = { ...sections[idx] };
     s.items = [...(s.items || []), { q: '', a: '' }];
@@ -68,6 +72,115 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
     onChange(updated);
   };
 
+  // Spotlight helpers
+  const addSpotlight = (idx: number) => {
+    const s = { ...sections[idx] };
+    s.spotlights = [...(s.spotlights || []), { name: '', description: '', image_url: '' }];
+    const updated = [...sections];
+    updated[idx] = s;
+    onChange(updated);
+  };
+
+  const updateSpotlight = (sIdx: number, spIdx: number, field: string, value: string) => {
+    const s = { ...sections[sIdx] };
+    const spotlights = [...(s.spotlights || [])];
+    spotlights[spIdx] = { ...spotlights[spIdx], [field]: value };
+    s.spotlights = spotlights;
+    const updated = [...sections];
+    updated[sIdx] = s;
+    onChange(updated);
+  };
+
+  const removeSpotlight = (sIdx: number, spIdx: number) => {
+    const s = { ...sections[sIdx] };
+    s.spotlights = (s.spotlights || []).filter((_, i) => i !== spIdx);
+    const updated = [...sections];
+    updated[sIdx] = s;
+    onChange(updated);
+  };
+
+  const renderSectionBody = (section: ContentSection, idx: number) => {
+    switch (section.type) {
+      case 'faq':
+        return (
+          <div className="space-y-2 pl-6">
+            {(section.items || []).map((item, fIdx) => (
+              <div key={fIdx} className="flex gap-2">
+                <div className="flex-1 space-y-1">
+                  <Input value={item.q} onChange={(e) => updateFaqItem(idx, fIdx, 'q', e.target.value)} placeholder="Question" className="h-8 text-sm" />
+                  <Input value={item.a} onChange={(e) => updateFaqItem(idx, fIdx, 'a', e.target.value)} placeholder="Answer" className="h-8 text-sm" />
+                </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeFaqItem(idx, fIdx)}><Trash2 className="h-3 w-3" /></Button>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={() => addFaqItem(idx)}><Plus className="h-3 w-3 mr-1" /> Add Q&A</Button>
+          </div>
+        );
+
+      case 'before_after':
+        return (
+          <div className="space-y-2 pl-6">
+            <div>
+              <Label className="text-xs text-muted-foreground">Before Image URL</Label>
+              <Input value={section.before_image || ''} onChange={(e) => updateSection(idx, { before_image: e.target.value })} placeholder="https://... before image" className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">After Image URL</Label>
+              <Input value={section.after_image || ''} onChange={(e) => updateSection(idx, { after_image: e.target.value })} placeholder="https://... after image" className="h-8 text-sm" />
+            </div>
+          </div>
+        );
+
+      case 'spotlight':
+        return (
+          <div className="space-y-2 pl-6">
+            {(section.spotlights || []).map((sp, spIdx) => (
+              <div key={spIdx} className="border border-border rounded-lg p-3 space-y-1.5">
+                <div className="flex gap-2 items-start">
+                  <div className="flex-1 space-y-1.5">
+                    <Input value={sp.name} onChange={(e) => updateSpotlight(idx, spIdx, 'name', e.target.value)} placeholder="Name (e.g. Vitamin C)" className="h-8 text-sm" />
+                    <Input value={sp.image_url} onChange={(e) => updateSpotlight(idx, spIdx, 'image_url', e.target.value)} placeholder="Image URL" className="h-8 text-sm" />
+                    <Textarea value={sp.description} onChange={(e) => updateSpotlight(idx, spIdx, 'description', e.target.value)} placeholder="Description" rows={2} className="text-sm" />
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => removeSpotlight(idx, spIdx)}><Trash2 className="h-3 w-3" /></Button>
+                </div>
+              </div>
+            ))}
+            <Button variant="outline" size="sm" onClick={() => addSpotlight(idx)}><Plus className="h-3 w-3 mr-1" /> Add Card</Button>
+          </div>
+        );
+
+      case 'video':
+        return (
+          <div className="space-y-2 pl-6">
+            <div>
+              <Label className="text-xs text-muted-foreground">Video URL (YouTube or direct)</Label>
+              <Input value={section.video_url || ''} onChange={(e) => updateSection(idx, { video_url: e.target.value })} placeholder="https://youtube.com/watch?v=..." className="h-8 text-sm" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Thumbnail URL (optional)</Label>
+              <Input value={section.video_thumbnail || ''} onChange={(e) => updateSection(idx, { video_thumbnail: e.target.value })} placeholder="https://... thumbnail image" className="h-8 text-sm" />
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <Textarea
+            value={section.content || ''}
+            onChange={(e) => updateSection(idx, { content: e.target.value })}
+            rows={3}
+            placeholder={
+              section.type === 'size_guide' ? 'Enter size chart or measurements...' :
+              section.type === 'ingredients' ? 'List ingredients, materials, or composition...' :
+              'Enter content...'
+            }
+            className="ml-6"
+          />
+        );
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -79,7 +192,7 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
 
       {sections.length === 0 && (
         <p className="text-sm text-muted-foreground py-4 text-center border border-dashed rounded-lg">
-          No content sections. Add FAQ, Size Guide, or custom content.
+          No content sections. Add FAQ, Size Guide, Spotlight, Video, or custom content.
         </p>
       )}
 
@@ -89,9 +202,9 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
             <GripVertical className="h-4 w-4 text-muted-foreground" />
             <Select
               value={section.type}
-              onValueChange={(v) => updateSection(idx, { type: v as ContentSection['type'], title: SECTION_TYPES.find(t => t.value === v)?.label || section.title })}
+              onValueChange={(v) => updateSection(idx, { type: v as ContentSection['type'], title: section.title === (SECTION_TYPES.find(t => t.value === section.type)?.label || '') ? (SECTION_TYPES.find(t => t.value === v)?.label || section.title) : section.title })}
             >
-              <SelectTrigger className="w-40 h-8">
+              <SelectTrigger className="w-44 h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -102,7 +215,7 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
               value={section.title}
               onChange={(e) => updateSection(idx, { title: e.target.value })}
               className="flex-1 h-8"
-              placeholder="Section title"
+              placeholder="Section title (customisable)"
             />
             <Switch
               checked={section.enabled}
@@ -113,46 +226,7 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
             </Button>
           </div>
 
-          {section.type === 'faq' ? (
-            <div className="space-y-2 pl-6">
-              {(section.items || []).map((item, fIdx) => (
-                <div key={fIdx} className="flex gap-2">
-                  <div className="flex-1 space-y-1">
-                    <Input
-                      value={item.q}
-                      onChange={(e) => updateFaqItem(idx, fIdx, 'q', e.target.value)}
-                      placeholder="Question"
-                      className="h-8 text-sm"
-                    />
-                    <Input
-                      value={item.a}
-                      onChange={(e) => updateFaqItem(idx, fIdx, 'a', e.target.value)}
-                      placeholder="Answer"
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeFaqItem(idx, fIdx)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={() => addFaqItem(idx)}>
-                <Plus className="h-3 w-3 mr-1" /> Add Q&A
-              </Button>
-            </div>
-          ) : (
-            <Textarea
-              value={section.content || ''}
-              onChange={(e) => updateSection(idx, { content: e.target.value })}
-              rows={3}
-              placeholder={
-                section.type === 'size_guide' ? 'Enter size chart or measurements...' :
-                section.type === 'ingredients' ? 'List ingredients, materials, or composition...' :
-                'Enter content...'
-              }
-              className="ml-6"
-            />
-          )}
+          {renderSectionBody(section, idx)}
         </div>
       ))}
     </div>

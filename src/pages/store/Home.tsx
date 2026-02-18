@@ -209,25 +209,22 @@ export default function HomePage() {
       {/* Categories */}
       {categories.length > 0 && (
         <section className="container mx-auto px-4 py-6 md:py-10">
-          <div className="flex items-center justify-between mb-4 md:mb-6">
+          <div className="mb-4 md:mb-6">
             <h2 className="text-lg md:text-2xl font-bold text-foreground">Shop by Category</h2>
-            <Button variant="ghost" asChild size="sm">
-              <Link to="/products">View All <ArrowRight className="h-4 w-4 ml-1" /></Link>
-            </Button>
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-3 md:gap-4">
             {categories.map((category) => (
               <Link key={category.id} to={`/products?category=${category.slug}`} className="group text-center">
-                <div className="aspect-square rounded-full overflow-hidden bg-muted border-2 border-transparent group-hover:border-primary transition-colors mx-auto w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24">
+                <div className="aspect-square rounded-xl overflow-hidden bg-muted border-2 border-transparent group-hover:border-primary transition-colors mx-auto w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24">
                   {category.image_url ? (
-                    <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" />
+                    <img src={category.image_url} alt={category.name} className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-secondary">
                       <span className="text-lg md:text-2xl font-bold text-muted-foreground">{category.name.charAt(0)}</span>
                     </div>
                   )}
                 </div>
-                <p className="mt-1 text-[10px] md:text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{category.name}</p>
+                <p className="mt-1.5 text-[10px] md:text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{category.name}</p>
               </Link>
             ))}
           </div>
