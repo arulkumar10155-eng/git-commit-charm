@@ -34,7 +34,7 @@ export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { user, signOut } = useAuth();
 
-  const { data } = useQuery({
+  const { data, isLoading: isHeaderLoading } = useQuery({
     queryKey: ['header-data'],
     queryFn: fetchHeaderData,
     staleTime: 5 * 60 * 1000,
@@ -75,7 +75,7 @@ export function Header() {
 
       {/* Main header */}
       <div className="container mx-auto px-4 py-2.5">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 relative">
           {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild className="lg:hidden">
@@ -94,10 +94,12 @@ export function Header() {
             </SheetContent>
           </Sheet>
 
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-            {storeInfo?.logo_url ? (
-              <img src={storeInfo.logo_url} alt={storeInfo.name} className="h-8 sm:h-10" />
+          {/* Logo - centered on mobile */}
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0 absolute left-1/2 -translate-x-1/2 lg:relative lg:left-auto lg:translate-x-0">
+            {isHeaderLoading ? (
+              <div className="h-8 sm:h-10 w-24 rounded bg-muted animate-pulse" />
+            ) : storeInfo?.logo_url ? (
+              <img src={storeInfo.logo_url} alt={storeInfo.name} className="h-8 sm:h-10 max-w-[120px] object-contain" />
             ) : (
               <span className="text-xl sm:text-2xl font-bold text-primary">{storeInfo?.name || 'Store'}</span>
             )}

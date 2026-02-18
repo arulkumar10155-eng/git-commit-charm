@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, ShoppingCart, DollarSign } from 'lucide-react';
+import { Users, ShoppingCart, DollarSign, MessageCircle } from 'lucide-react';
 
 interface Customer {
   id: string;
@@ -30,12 +30,17 @@ export default function AdminCustomers() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
+  const [customerCart, setCustomerCart] = useState<any[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
   const [stats, setStats] = useState({ total: 0, active: 0, blocked: 0 });
+  const [storeName, setStoreName] = useState('Our Store');
   const { toast } = useToast();
 
   useEffect(() => {
     fetchCustomers();
+    supabase.from('store_settings').select('value').eq('key', 'store_info').single().then(({ data }) => {
+      if (data) setStoreName((data.value as any)?.name || 'Our Store');
+    });
   }, []);
 
   const fetchCustomers = async () => {
@@ -96,8 +101,35 @@ export default function AdminCustomers() {
       .eq('user_id', customer.user_id)
       .order('created_at', { ascending: false })
       .limit(10);
-
     setCustomerOrders(data || []);
+
+    // Fetch customer cart items
+    const { data: cart } = await supabase.from('cart').select('id').eq('user_id', customer.user_id).single();
+    if (cart) {
+      const { data: items } = await supabase
+        .from('cart_items')
+        .select('*, product:products(name, price, images:product_images(image_url))')
+        .eq('cart_id', cart.id);
+      setCustomerCart(items || []);
+    } else {
+      setCustomerCart([]);
+    }
+  };
+
+  const sendWhatsApp = (phone: string, message: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    const intlPhone = cleaned.startsWith('91') ? cleaned : `91${cleaned}`;
+    window.open(`https://wa.me/${intlPhone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const getAbandonedCartMsg = (customer: Customer) => {
+    const items = customerCart.map((i: any) => i.product?.name).filter(Boolean).join(', ');
+    const totalPrice = customerCart.reduce((sum: number, i: any) => sum + (Number(i.product?.price || 0) * i.quantity), 0);
+    return `Hi ${customer.full_name || 'there'} 👋\nYou left something awesome in your cart 🛒\n\n🛍 ${items || 'Your items'}\n💰 Price: Rs ${totalPrice.toFixed(0)}\n\nComplete your order now before it goes out of stock 👇\n\n– ${storeName}`;
+  };
+
+  const getOfferMsg = (customer: Customer) => {
+    return `Hi ${customer.full_name || 'there'} 🎉\nSpecial offer just for you!\n\n💥 Flat __% OFF\n🏷 Coupon Code: ____\n⏰ Valid till: ____\n\nShop now 👇\n\n– ${storeName}`;
   };
 
   const handleBlockToggle = async (blocked: boolean) => {
@@ -258,6 +290,55 @@ export default function AdminCustomers() {
               />
             </div>
 
+            {/* Cart Items */}
+            {customerCart.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4" /> Cart Items ({customerCart.length})
+                </h3>
+                <div className="space-y-2">
+                  {customerCart.map((item: any) => (
+                    <div key={item.id} className="flex items-center gap-3 p-2 bg-muted/50 rounded-lg">
+                      {item.product?.images?.[0]?.image_url && (
+                        <img src={item.product.images[0].image_url} alt="" className="h-10 w-10 rounded object-cover" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{item.product?.name || 'Unknown'}</p>
+                        <p className="text-xs text-muted-foreground">Qty: {item.quantity} · Rs {Number(item.product?.price || 0).toFixed(0)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* WhatsApp */}
+            {selectedCustomer.mobile_number && (
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp
+                </h3>
+                {customerCart.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-xs"
+                    onClick={() => sendWhatsApp(selectedCustomer.mobile_number!, getAbandonedCartMsg(selectedCustomer))}
+                  >
+                    🛒 Abandoned Cart Reminder
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-xs"
+                  onClick={() => sendWhatsApp(selectedCustomer.mobile_number!, getOfferMsg(selectedCustomer))}
+                >
+                  🎉 Offer / Coupon Broadcast
+                </Button>
+              </div>
+            )}
+
             {customerOrders.length > 0 && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm">Recent Orders</h3>
@@ -271,7 +352,7 @@ export default function AdminCustomers() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">₹{Number(order.total).toFixed(2)}</p>
+                        <p className="font-medium">Rs {Number(order.total).toFixed(0)}</p>
                         <Badge variant="secondary" className="text-xs">{order.status}</Badge>
                       </div>
                     </div>

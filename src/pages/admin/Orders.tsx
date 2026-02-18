@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import {
-  ArrowLeft, Package, Truck, MapPin, CreditCard, Loader2, Download, RefreshCw, Search
+  ArrowLeft, Package, Truck, MapPin, CreditCard, Loader2, Download, RefreshCw, Search, MessageCircle
 } from 'lucide-react';
-import type { Order, OrderItem, OrderStatus, ShippingAddress, Delivery, DeliveryStatus, Payment } from '@/types/database';
+import type { Order, OrderItem, OrderStatus, ShippingAddress, Delivery, DeliveryStatus, Payment, StoreInfo } from '@/types/database';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -64,9 +64,16 @@ export default function AdminOrders() {
   const [refundReason, setRefundReason] = useState('');
   const [isRefunding, setIsRefunding] = useState(false);
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
+  const [customerPhone, setCustomerPhone] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => { fetchOrders(); }, []);
+  useEffect(() => { fetchOrders(); fetchStoreInfo(); }, []);
+
+  const fetchStoreInfo = async () => {
+    const { data } = await supabase.from('store_settings').select('value').eq('key', 'store_info').single();
+    if (data) setStoreInfo(data.value as unknown as StoreInfo);
+  };
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -90,6 +97,12 @@ export default function AdminOrders() {
   const handleRowClick = (order: Order) => {
     setSelectedOrder(order);
     fetchOrderDetails(order.id);
+    // Fetch customer phone
+    if (order.user_id) {
+      supabase.from('profiles').select('mobile_number').eq('user_id', order.user_id).single().then(({ data }) => {
+        setCustomerPhone(data?.mobile_number || '');
+      });
+    }
   };
 
   const handleBack = () => {
@@ -97,6 +110,42 @@ export default function AdminOrders() {
     setOrderItems([]);
     setDelivery(null);
     setPayments([]);
+    setCustomerPhone('');
+  };
+
+  // WhatsApp template helper
+  const sendWhatsApp = (phone: string, message: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    const intlPhone = cleaned.startsWith('91') ? cleaned : `91${cleaned}`;
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/${intlPhone}?text=${encoded}`, '_blank');
+  };
+
+  const storeName = storeInfo?.name || 'Our Store';
+
+  const getOrderConfirmationMsg = () => {
+    if (!selectedOrder) return '';
+    const addr = getAddress();
+    const items = orderItems.map(i => `${i.product_name} x${i.quantity}`).join(', ');
+    return `Hi ${addr?.full_name || 'there'} 👋\nYour order #${selectedOrder.order_number} has been placed successfully ✅\n\n🛍 Product(s): ${items}\n💰 Order Amount: Rs ${Number(selectedOrder.total).toFixed(0)}\n📍 Delivery Address: ${addr ? `${addr.address_line1}, ${addr.city} - ${addr.pincode}` : 'N/A'}\n\nWe'll notify you once it's shipped 🚚\n– ${storeName}`;
+  };
+
+  const getPaymentReminderMsg = () => {
+    if (!selectedOrder) return '';
+    const addr = getAddress();
+    return `Hi ${addr?.full_name || 'there'},\nYour payment of Rs ${Number(selectedOrder.total).toFixed(0)} for order #${selectedOrder.order_number} is still pending ⏳\n\nPlease complete your payment soon.\n\nNeed help? Just reply to this message 😊\n– ${storeName}`;
+  };
+
+  const getShippingUpdateMsg = () => {
+    if (!selectedOrder) return '';
+    const addr = getAddress();
+    return `Hi ${addr?.full_name || 'there'} 🎉\nYour order #${selectedOrder.order_number} has been shipped 🚚\n\n📦 Courier: ${delivery?.partner_name || 'N/A'}\n🔗 Track here: ${delivery?.tracking_url || 'N/A'}\n\nSit tight! Your order will reach you soon 😊\n– ${storeName}`;
+  };
+
+  const getDeliveryConfirmMsg = () => {
+    if (!selectedOrder) return '';
+    const addr = getAddress();
+    return `Hi ${addr?.full_name || 'there'} 👋\nYour order #${selectedOrder.order_number} has been delivered successfully ✅\n\nWe hope you love your purchase 💖\n\n– ${storeName}`;
   };
 
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
@@ -160,56 +209,117 @@ export default function AdminOrders() {
     if (!selectedOrder) return;
     const doc = new jsPDF();
     const addr = getAddress();
+    const pw = doc.internal.pageSize.getWidth();
     
-    doc.setFontSize(18);
-    doc.text('INVOICE', 105, 20, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text(`Order #: ${selectedOrder.order_number}`, 15, 35);
-    doc.text(`Date: ${new Date(selectedOrder.created_at).toLocaleDateString('en-IN')}`, 15, 42);
-    doc.text(`Status: ${selectedOrder.status.toUpperCase()}`, 15, 49);
-    doc.text(`Payment: ${selectedOrder.payment_status?.toUpperCase()} (${selectedOrder.payment_method?.toUpperCase() || 'N/A'})`, 15, 56);
+    // Border
+    doc.setDrawColor(40);
+    doc.setLineWidth(0.5);
+    doc.rect(8, 8, pw - 16, doc.internal.pageSize.getHeight() - 16);
 
+    // Company Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(storeInfo?.name || 'INVOICE', 15, 22);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    let hy = 28;
+    if (storeInfo?.address) { doc.text(storeInfo.address, 15, hy); hy += 4; }
+    if (storeInfo?.contact_phone) { doc.text(`Phone: ${storeInfo.contact_phone}`, 15, hy); hy += 4; }
+    if (storeInfo?.contact_email) { doc.text(`Email: ${storeInfo.contact_email}`, 15, hy); hy += 4; }
+
+    // Invoice title on right
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TAX INVOICE', pw - 15, 22, { align: 'right' });
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Invoice #: ${selectedOrder.order_number}`, pw - 15, 28, { align: 'right' });
+    doc.text(`Date: ${new Date(selectedOrder.created_at).toLocaleDateString('en-IN')}`, pw - 15, 33, { align: 'right' });
+    doc.text(`Payment: ${(selectedOrder.payment_method || 'N/A').toUpperCase()} - ${(selectedOrder.payment_status || '').toUpperCase()}`, pw - 15, 38, { align: 'right' });
+
+    // Divider
+    doc.setDrawColor(100);
+    doc.setLineWidth(0.3);
+    doc.line(12, 44, pw - 12, 44);
+
+    // Bill To / Ship To
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('BILL TO / SHIP TO:', 15, 51);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
     if (addr) {
-      doc.setFontSize(11);
-      doc.text('Ship To:', 130, 35);
-      doc.setFontSize(9);
-      doc.text(addr.full_name, 130, 42);
-      doc.text(addr.address_line1, 130, 48);
-      if (addr.address_line2) doc.text(addr.address_line2, 130, 54);
-      doc.text(`${addr.city}, ${addr.state} - ${addr.pincode}`, 130, addr.address_line2 ? 60 : 54);
-      doc.text(`Phone: ${addr.mobile_number}`, 130, addr.address_line2 ? 66 : 60);
+      let ay = 56;
+      doc.text(addr.full_name, 15, ay); ay += 4;
+      doc.text(addr.address_line1, 15, ay); ay += 4;
+      if (addr.address_line2) { doc.text(addr.address_line2, 15, ay); ay += 4; }
+      doc.text(`${addr.city}, ${addr.state} - ${addr.pincode}`, 15, ay); ay += 4;
+      doc.text(`Phone: ${addr.mobile_number}`, 15, ay);
     }
 
-    let y = 75;
-    doc.setFontSize(9);
+    // Items table
+    let y = 80;
+    // Table header background
+    doc.setFillColor(240, 240, 240);
+    doc.rect(12, y - 5, pw - 24, 8, 'F');
+    doc.setDrawColor(40);
+    doc.setLineWidth(0.3);
+    doc.line(12, y - 5, pw - 12, y - 5);
+    doc.line(12, y + 3, pw - 12, y + 3);
+
     doc.setFont('helvetica', 'bold');
-    doc.text('Item', 15, y);
-    doc.text('Variant', 90, y);
-    doc.text('Qty', 130, y);
-    doc.text('Price', 150, y);
-    doc.text('Total', 175, y);
-    y += 3;
-    doc.line(15, y, 195, y);
-    y += 5;
+    doc.setFontSize(8);
+    const cols = [15, 25, 100, 125, 150, 175];
+    doc.text('S.No', cols[0], y);
+    doc.text('Product', cols[1], y);
+    doc.text('Variant', cols[2], y);
+    doc.text('Qty', cols[3], y);
+    doc.text('Rate', cols[4], y);
+    doc.text('Amount', cols[5], y);
+    y += 8;
 
     doc.setFont('helvetica', 'normal');
-    orderItems.forEach((item) => {
-      doc.text(item.product_name.substring(0, 40), 15, y);
-      doc.text(item.variant_name || '-', 90, y);
-      doc.text(String(item.quantity), 130, y);
-      doc.text(`₹${Number(item.price).toFixed(2)}`, 150, y);
-      doc.text(`₹${Number(item.total).toFixed(2)}`, 175, y);
+    orderItems.forEach((item, idx) => {
+      doc.text(String(idx + 1), cols[0], y);
+      doc.text(item.product_name.substring(0, 38), cols[1], y);
+      doc.text(item.variant_name || '-', cols[2], y);
+      doc.text(String(item.quantity), cols[3], y);
+      doc.text(`Rs ${Number(item.price).toFixed(2)}`, cols[4], y);
+      doc.text(`Rs ${Number(item.total).toFixed(2)}`, cols[5], y);
       y += 7;
+      // Row border
+      doc.setDrawColor(220);
+      doc.line(12, y - 3, pw - 12, y - 3);
     });
 
-    y += 5;
-    doc.line(130, y, 195, y);
-    y += 7;
-    doc.text('Subtotal:', 130, y); doc.text(`₹${Number(selectedOrder.subtotal).toFixed(2)}`, 175, y); y += 6;
-    doc.text('Discount:', 130, y); doc.text(`-₹${Number(selectedOrder.discount).toFixed(2)}`, 175, y); y += 6;
-    doc.text('Shipping:', 130, y); doc.text(`₹${Number(selectedOrder.shipping_charge).toFixed(2)}`, 175, y); y += 6;
+    // Totals section
+    y += 4;
+    doc.setDrawColor(40);
+    doc.line(cols[4] - 5, y - 2, pw - 12, y - 2);
+    y += 3;
+    doc.setFontSize(8);
+    doc.text('Subtotal:', cols[4], y); doc.text(`Rs ${Number(selectedOrder.subtotal).toFixed(2)}`, cols[5], y); y += 6;
+    if (Number(selectedOrder.discount) > 0) {
+      doc.text('Discount:', cols[4], y); doc.text(`-Rs ${Number(selectedOrder.discount).toFixed(2)}`, cols[5], y); y += 6;
+    }
+    doc.text('Shipping:', cols[4], y); doc.text(`Rs ${Number(selectedOrder.shipping_charge).toFixed(2)}`, cols[5], y); y += 6;
+    if (Number(selectedOrder.tax) > 0) {
+      doc.text('Tax:', cols[4], y); doc.text(`Rs ${Number(selectedOrder.tax).toFixed(2)}`, cols[5], y); y += 6;
+    }
+    doc.setDrawColor(40);
+    doc.line(cols[4] - 5, y - 2, pw - 12, y - 2);
     doc.setFont('helvetica', 'bold');
-    doc.text('Total:', 130, y); doc.text(`₹${Number(selectedOrder.total).toFixed(2)}`, 175, y);
+    doc.setFontSize(10);
+    doc.text('Grand Total:', cols[4], y + 2); doc.text(`Rs ${Number(selectedOrder.total).toFixed(2)}`, cols[5], y + 2);
+
+    // Footer
+    const footerY = doc.internal.pageSize.getHeight() - 25;
+    doc.setDrawColor(100);
+    doc.line(12, footerY, pw - 12, footerY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.text('Thank you for your purchase!', pw / 2, footerY + 6, { align: 'center' });
+    doc.text(`${storeInfo?.name || ''} | ${storeInfo?.contact_email || ''} | ${storeInfo?.contact_phone || ''}`, pw / 2, footerY + 11, { align: 'center' });
 
     doc.save(`Invoice-${selectedOrder.order_number}.pdf`);
   };
@@ -529,6 +639,51 @@ export default function AdminOrders() {
                       <span className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</span>
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* WhatsApp Section */}
+            {customerPhone && (
+              <Card>
+                <CardHeader className="py-3 px-4">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-xs"
+                    onClick={() => sendWhatsApp(customerPhone, getOrderConfirmationMsg())}
+                  >
+                    ✅ Order Confirmation
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-xs"
+                    onClick={() => sendWhatsApp(customerPhone, getPaymentReminderMsg())}
+                  >
+                    ⏳ Payment Reminder
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-xs"
+                    onClick={() => sendWhatsApp(customerPhone, getShippingUpdateMsg())}
+                  >
+                    🚚 Shipping Update
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-xs"
+                    onClick={() => sendWhatsApp(customerPhone, getDeliveryConfirmMsg())}
+                  >
+                    📦 Delivery Confirmation
+                  </Button>
                 </CardContent>
               </Card>
             )}

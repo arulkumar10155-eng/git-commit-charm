@@ -121,7 +121,7 @@ export default function AdminProducts() {
       else if (names.some(n => FOOTWEAR_SIZES.includes(n))) detectedType = 'footwear';
     }
     const contentSections = (selectedProduct as any).content_sections as ContentSection[] || [];
-    setFormData({ ...selectedProduct, imageUrls, productType: detectedType, contentSections });
+    setFormData({ ...selectedProduct, imageUrls, productType: detectedType, contentSections, variant_required: (selectedProduct as any).variant_required || false } as any);
     setVariantForms(existingVariants);
     setIsDetailOpen(false);
     setIsFormOpen(true);
@@ -217,6 +217,7 @@ export default function AdminProducts() {
       badge: formData.badge || null,
       sort_order: formData.sort_order ?? 0,
       content_sections: (formData.contentSections || []) as unknown as import('@/integrations/supabase/types').Json,
+      variant_required: (formData as any).variant_required || false,
     };
 
     try {
@@ -564,7 +565,16 @@ export default function AdminProducts() {
                   <Switch id="is_bestseller" checked={formData.is_bestseller} onCheckedChange={(checked) => setFormData({ ...formData, is_bestseller: checked })} />
                   <Label htmlFor="is_bestseller">Bestseller</Label>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Switch id="variant_required" checked={(formData as any).variant_required || false} onCheckedChange={(checked) => setFormData({ ...formData, variant_required: checked } as any)} />
+                  <Label htmlFor="variant_required">Variant Required</Label>
+                </div>
               </div>
+              {(formData as any).variant_required && (
+                <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950 dark:text-amber-400 p-2 rounded">
+                  ⚠️ Customers must select a variant before adding to cart
+                </p>
+              )}
             </TabsContent>
 
             <TabsContent value="pricing" className="space-y-4 mt-4">
