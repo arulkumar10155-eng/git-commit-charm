@@ -941,6 +941,7 @@ export type Database = {
           stock_quantity: number | null
           tax_rate: number | null
           updated_at: string | null
+          variant_required: boolean | null
         }
         Insert: {
           badge?: string | null
@@ -966,6 +967,7 @@ export type Database = {
           stock_quantity?: number | null
           tax_rate?: number | null
           updated_at?: string | null
+          variant_required?: boolean | null
         }
         Update: {
           badge?: string | null
@@ -991,6 +993,7 @@ export type Database = {
           stock_quantity?: number | null
           tax_rate?: number | null
           updated_at?: string | null
+          variant_required?: boolean | null
         }
         Relationships: [
           {

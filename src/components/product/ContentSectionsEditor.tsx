@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import type { ContentSection } from './ContentSections';
 
@@ -119,14 +120,28 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
 
       case 'before_after':
         return (
-          <div className="space-y-2 pl-6">
+          <div className="space-y-3 pl-6">
             <div>
-              <Label className="text-xs text-muted-foreground">Before Image URL</Label>
-              <Input value={section.before_image || ''} onChange={(e) => updateSection(idx, { before_image: e.target.value })} placeholder="https://... before image" className="h-8 text-sm" />
+              <Label className="text-xs text-muted-foreground mb-1 block">Before Image</Label>
+              <ImageUpload
+                bucket="products"
+                value={section.before_image || ''}
+                onChange={(url) => updateSection(idx, { before_image: url || '' })}
+                folder="content-sections"
+                aspectRatio="video"
+                placeholder="Upload before image"
+              />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">After Image URL</Label>
-              <Input value={section.after_image || ''} onChange={(e) => updateSection(idx, { after_image: e.target.value })} placeholder="https://... after image" className="h-8 text-sm" />
+              <Label className="text-xs text-muted-foreground mb-1 block">After Image</Label>
+              <ImageUpload
+                bucket="products"
+                value={section.after_image || ''}
+                onChange={(url) => updateSection(idx, { after_image: url || '' })}
+                folder="content-sections"
+                aspectRatio="video"
+                placeholder="Upload after image"
+              />
             </div>
           </div>
         );
@@ -139,7 +154,14 @@ export function ContentSectionsEditor({ sections, onChange }: ContentSectionsEdi
                 <div className="flex gap-2 items-start">
                   <div className="flex-1 space-y-1.5">
                     <Input value={sp.name} onChange={(e) => updateSpotlight(idx, spIdx, 'name', e.target.value)} placeholder="Name (e.g. Vitamin C)" className="h-8 text-sm" />
-                    <Input value={sp.image_url} onChange={(e) => updateSpotlight(idx, spIdx, 'image_url', e.target.value)} placeholder="Image URL" className="h-8 text-sm" />
+                    <ImageUpload
+                      bucket="products"
+                      value={sp.image_url || ''}
+                      onChange={(url) => updateSpotlight(idx, spIdx, 'image_url', url || '')}
+                      folder="content-sections"
+                      aspectRatio="square"
+                      placeholder="Upload spotlight image"
+                    />
                     <Textarea value={sp.description} onChange={(e) => updateSpotlight(idx, spIdx, 'description', e.target.value)} placeholder="Description" rows={2} className="text-sm" />
                   </div>
                   <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={() => removeSpotlight(idx, spIdx)}><Trash2 className="h-3 w-3" /></Button>

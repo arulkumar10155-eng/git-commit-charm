@@ -81,6 +81,8 @@ export default function ProductDetailPage() {
     setIsLoading(false);
   };
 
+  const [variantError, setVariantError] = useState(false);
+
   const handleAddToCart = async () => {
     if (!user) {
       toast({ title: 'Please login', description: 'You need to login to add items to cart' });
@@ -88,6 +90,14 @@ export default function ProductDetailPage() {
       return;
     }
     if (!product) return;
+    
+    // Check if variant selection is mandatory
+    if ((product as any).variant_required && variants.length > 0 && !selectedVariant) {
+      setVariantError(true);
+      toast({ title: 'Select a variant', description: 'Please select a variant before adding to cart', variant: 'destructive' });
+      return;
+    }
+    setVariantError(false);
     setIsAddingToCart(true);
 
     try {
@@ -343,7 +353,12 @@ export default function ProductDetailPage() {
             {/* Variants */}
             {variants.length > 0 && (
               <div>
-                <Label className="text-sm md:text-base font-semibold">Select Variant</Label>
+                <Label className={`text-sm md:text-base font-semibold ${variantError ? 'text-destructive' : ''}`}>
+                  Select Variant {(product as any).variant_required && <span className="text-destructive">*</span>}
+                </Label>
+                {variantError && (
+                  <p className="text-xs text-destructive mt-1 mb-1">⚠️ Please select a variant to continue</p>
+                )}
                 <RadioGroup
                   value={selectedVariant?.id || ''}
                   onValueChange={(val) => setSelectedVariant(variants.find(v => v.id === val) || null)}
